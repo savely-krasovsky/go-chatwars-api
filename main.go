@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"log"
-<<<<<<< HEAD
 	"strings"
-=======
->>>>>>> 29e16f5c592c2ccbc421bfb20a3d0d6f48f1c3e4
 )
 
 func (res *Response) UnmarshalJSON(b []byte) error {
@@ -135,7 +132,6 @@ func (payload *reqPayload) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
-<<<<<<< HEAD
 // Create new client, you can set server optional param, defaults to Chat Wars 2 server (or EU), accepts those variants:
 // cw2, eu, cw3, ru
 func NewClient(user string, password string, server ...string) (*Client, error) {
@@ -148,11 +144,6 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 			rabbitUrl = fmt.Sprintf(CW3, user, password)
 		}
 	}
-=======
-// Create new client
-func NewClient(user string, password string) (*Client, error) {
-	rabbitUrl := fmt.Sprintf("amqps://%s:%s@api.chatwars.me:5673/", user, password)
->>>>>>> 29e16f5c592c2ccbc421bfb20a3d0d6f48f1c3e4
 
 	conn, err := amqp.Dial(rabbitUrl)
 	if err != nil {

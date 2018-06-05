@@ -6,14 +6,11 @@ import (
 	"sync"
 )
 
-<<<<<<< HEAD
 const (
 	CW2 = "amqps://%s:%s@api.chatwars.me:5673/"
 	CW3 = "amqps://%s:%s@api.chtwrs.com:5673/"
 )
 
-=======
->>>>>>> 29e16f5c592c2ccbc421bfb20a3d0d6f48f1c3e4
 type ActionEnum string
 
 const (
