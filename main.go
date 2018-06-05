@@ -137,7 +137,7 @@ func (payload *reqPayload) MarshalJSON() ([]byte, error) {
 func NewClient(user string, password string, server ...string) (*Client, error) {
 	rabbitUrl := fmt.Sprintf(CW2, user, password)
 
-	if len(server) < 0 {
+	if len(server) > 0 {
 		if strings.ToLower(server[0]) == "cw2" || strings.ToLower(server[0]) == "eu" {
 			rabbitUrl = fmt.Sprintf(CW2, user, password)
 		} else if strings.ToLower(server[0]) == "cw3" || strings.ToLower(server[0]) == "ru" {
