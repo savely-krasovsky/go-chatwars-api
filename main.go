@@ -235,7 +235,7 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 }
 
 // Close connection and active channel
-func (c *Client) CloseConnection() {
+func (c *Client) CloseConnection() error {
 	close(c.Updates)
 
 	close(c.Deals)
@@ -243,9 +243,17 @@ func (c *Client) CloseConnection() {
 	close(c.SexDigest)
 	close(c.YellowPages)
 
-	c.channelForUpdates.Close()
-	c.channelForPublish.Close()
-	c.connection.Close()
+	if err := c.channelForUpdates.Close(); err != nil {
+		return err
+	}
+	if err := c.channelForPublish.Close(); err != nil {
+		return err
+	}
+	if err := c.connection.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Client) makeRequest(req []byte) (err error) {
@@ -259,7 +267,28 @@ func (c *Client) makeRequest(req []byte) (err error) {
 			Body:        req,
 		},
 	)
-	if err != nil {
+	// If channel closed
+	if err != nil && err.(amqp.Error).Code == 504 {
+		// Ensure we close it
+		err := c.channelForPublish.Close()
+		if err != nil {
+			return err
+		}
+
+		// Open new
+		chForPublish, err := c.connection.Channel()
+		if err != nil {
+			return err
+		}
+
+		// Reassign it
+		c.channelForPublish = chForPublish
+
+		// And try again
+		if err := c.makeRequest(req); err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
 
