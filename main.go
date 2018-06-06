@@ -269,12 +269,6 @@ func (c *Client) makeRequest(req []byte) (err error) {
 	)
 	// If channel closed
 	if err != nil && err.(*amqp.Error).Code == 504 {
-		// Ensure we close it
-		err := c.channelForPublish.Close()
-		if err != nil {
-			return err
-		}
-
 		// Open new
 		chForPublish, err := c.connection.Channel()
 		if err != nil {
