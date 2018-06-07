@@ -305,6 +305,7 @@ type ResGetInfo struct {
 type ResRequestProfile struct {
 	Profile Profile `json:"profile"`
 	UserID  int     `json:"userId"`
+	Token   string  `json:"token"`
 }
 
 type Profile struct {
