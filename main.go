@@ -145,36 +145,14 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 		}
 	}
 
-	conn, err := amqp.Dial(rabbitUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	chForUpdates, err := conn.Channel()
-	if err != nil {
-		return nil, err
-	}
-
-	chForPublish, err := conn.Channel()
-	if err != nil {
-		return nil, err
-	}
-
 	client := Client{
-		User:              user,
-		Password:          password,
-		connection:        conn,
-		channelForUpdates: chForUpdates,
-		channelForPublish: chForPublish,
-		RabbitUrl:         rabbitUrl,
+		User:      user,
+		Password:  password,
+		RabbitUrl: rabbitUrl,
 	}
 
 	client.Updates = make(chan Response, 100)
-	err = client.startUpdateConsumer()
-	if err != nil {
-		return nil, err
-	}
-
+	client.reconnect()
 	return &client, nil
 }
 
@@ -193,7 +171,6 @@ func (c *Client) reStartConsumers() error {
 		if err != nil {
 			return err
 		}
-
 	}
 
 	if c.Offers != nil {
@@ -201,7 +178,6 @@ func (c *Client) reStartConsumers() error {
 		if err != nil {
 			return err
 		}
-
 	}
 
 	if c.SexDigest != nil {
@@ -217,6 +193,57 @@ func (c *Client) reStartConsumers() error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (c *Client) reconnect() error {
+	// Open new
+	conn, err := amqp.Dial(c.RabbitUrl)
+	if err != nil {
+		return err
+	}
+
+	chForPublish, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	chForUpdates, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	// force close old channels and connection to close old consumers
+	if c.channelForUpdates != nil {
+		c.channelForUpdates.Close()
+	}
+	if c.channelForPublish != nil {
+		c.channelForPublish.Close()
+	}
+	if c.connection != nil {
+		c.connection.Close()
+	}
+	// Reassign it and restart consumers
+	c.connection = conn
+	c.channelForPublish = chForPublish
+	c.channelForUpdates = chForUpdates
+
+	err = c.reStartConsumers()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		// Waits here for the channel to be closed
+		log.Printf("closing: %s", <-c.connection.NotifyClose(make(chan *amqp.Error)))
+		err = c.reconnect()
+		if err != nil {
+			log.Println("reconnect unsuccessful")
+		} else {
+			log.Println("reconnect successful")
+		}
+	}()
+
 	return nil
 }
 
@@ -319,36 +346,10 @@ func (c *Client) makeRequest(req []byte) (err error) {
 	)
 	// If channel closed
 	if err != nil && err.(*amqp.Error).Code == 504 {
-		// Open new
-		conn, err := amqp.Dial(c.RabbitUrl)
+		err = c.reconnect()
 		if err != nil {
 			return err
 		}
-
-		chForPublish, err := conn.Channel()
-		if err != nil {
-			return err
-		}
-
-		chForUpdates, err := conn.Channel()
-		if err != nil {
-			return err
-		}
-
-		// force close old channels and connection to close old consumers
-		c.channelForUpdates.Close()
-		c.channelForPublish.Close()
-		c.connection.Close()
-		// Reassign it and restart consumers
-		c.connection = conn
-		c.channelForPublish = chForPublish
-		c.channelForUpdates = chForUpdates
-
-		err = c.reStartConsumers()
-		if err != nil {
-			return err
-		}
-
 		// And try again
 		if err := c.makeRequest(req); err != nil {
 			return err
