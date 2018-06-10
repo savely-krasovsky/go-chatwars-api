@@ -160,8 +160,70 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 		return nil, err
 	}
 
-	updates, err := chForUpdates.Consume(
-		fmt.Sprintf("%s_i", user),
+	client := Client{
+		User:              user,
+		Password:          password,
+		connection:        conn,
+		channelForUpdates: chForUpdates,
+		channelForPublish: chForPublish,
+		RabbitUrl:         rabbitUrl,
+	}
+
+	client.Updates = make(chan Response, 100)
+	err = client.startUpdateConsumer()
+	if err != nil {
+		return nil, err
+	}
+
+	return &client, nil
+}
+
+func (c *Client) reStartConsumers() error {
+	var err error
+
+	if c.Updates != nil {
+		err = c.startUpdateConsumer()
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.Deals != nil {
+		err = c.startDealsConsumer()
+		if err != nil {
+			return err
+		}
+
+	}
+
+	if c.Offers != nil {
+		err = c.startOffersConsumer()
+		if err != nil {
+			return err
+		}
+
+	}
+
+	if c.SexDigest != nil {
+		err = c.startSexDigestConsumer()
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.YellowPages != nil {
+		err = c.startYellowPages()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Start consumer for base events
+func (c *Client) startUpdateConsumer() error {
+	updates, err := c.channelForUpdates.Consume(
+		fmt.Sprintf("%s_i", c.User),
 		"",
 		true,
 		false,
@@ -170,22 +232,12 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 		nil,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	client := Client{
-		User:              user,
-		Password:          password,
-		connection:        conn,
-		channelForUpdates: chForUpdates,
-		channelForPublish: chForPublish,
-	}
-
-	client.Updates = make(chan Response, 100)
 
 	go func() {
 		for update := range updates {
-			if update.RoutingKey == fmt.Sprintf("%s_i", user) {
+			if update.RoutingKey == fmt.Sprintf("%s_i", c.User) {
 				var res Response
 				err := json.Unmarshal(update.Body, &res)
 				if err != nil {
@@ -218,7 +270,7 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 				}
 
 				// trying to load update with this salt
-				if waiter, found := client.waiters.Load(userID); found {
+				if waiter, found := c.waiters.Load(userID); found {
 					// found? send it to waiter channel
 					waiter.(chan Response) <- res
 
@@ -226,18 +278,16 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 					close(waiter.(chan Response))
 				}
 
-				client.Updates <- res
+				c.Updates <- res
 			}
 		}
 	}()
-
-	return &client, nil
+	return nil
 }
 
 // Close connection and active channel
 func (c *Client) CloseConnection() error {
 	close(c.Updates)
-
 	close(c.Deals)
 	close(c.Offers)
 	close(c.SexDigest)
@@ -270,13 +320,34 @@ func (c *Client) makeRequest(req []byte) (err error) {
 	// If channel closed
 	if err != nil && err.(*amqp.Error).Code == 504 {
 		// Open new
-		chForPublish, err := c.connection.Channel()
+		conn, err := amqp.Dial(c.RabbitUrl)
 		if err != nil {
 			return err
 		}
 
-		// Reassign it
+		chForPublish, err := conn.Channel()
+		if err != nil {
+			return err
+		}
+
+		chForUpdates, err := conn.Channel()
+		if err != nil {
+			return err
+		}
+
+		// force close old channels and connection to close old consumers
+		c.channelForUpdates.Close()
+		c.channelForPublish.Close()
+		c.connection.Close()
+		// Reassign it and restart consumers
+		c.connection = conn
 		c.channelForPublish = chForPublish
+		c.channelForUpdates = chForUpdates
+
+		err = c.reStartConsumers()
+		if err != nil {
+			return err
+		}
 
 		// And try again
 		if err := c.makeRequest(req); err != nil {
