@@ -8,6 +8,15 @@ import (
 
 // Initializes deals public exchange.
 func (c *Client) InitDeals() error {
+	c.Deals = make(chan Deal, 100)
+	err := c.startDealsConsumer()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) startDealsConsumer() error {
 	updates, err := c.channelForUpdates.Consume(
 		fmt.Sprintf("%s_deals", c.User),
 		"",
@@ -21,8 +30,6 @@ func (c *Client) InitDeals() error {
 		return err
 	}
 
-	c.Deals = make(chan Deal, 100)
-
 	go func() {
 		for update := range updates {
 			var res Deal
@@ -34,12 +41,20 @@ func (c *Client) InitDeals() error {
 			c.Deals <- res
 		}
 	}()
-
 	return nil
 }
 
 // // Initializes offers public exchange.
 func (c *Client) InitOffers() error {
+	c.Offers = make(chan Offer, 100)
+	err := c.startOffersConsumer()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) startOffersConsumer() error {
 	updates, err := c.channelForUpdates.Consume(
 		fmt.Sprintf("%s_offers", c.User),
 		"",
@@ -53,8 +68,6 @@ func (c *Client) InitOffers() error {
 		return err
 	}
 
-	c.Offers = make(chan Offer, 100)
-
 	go func() {
 		for update := range updates {
 			var res Offer
@@ -66,12 +79,20 @@ func (c *Client) InitOffers() error {
 			c.Offers <- res
 		}
 	}()
-
 	return nil
 }
 
 // Initializes sex_digest public exchange.
 func (c *Client) InitSexDigest() error {
+	c.SexDigest = make(chan []SexDigestItem, 1)
+	err := c.startSexDigestConsumer()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) startSexDigestConsumer() error {
 	updates, err := c.channelForUpdates.Consume(
 		fmt.Sprintf("%s_sex_digest", c.User),
 		"",
@@ -85,8 +106,6 @@ func (c *Client) InitSexDigest() error {
 		return err
 	}
 
-	c.SexDigest = make(chan []SexDigestItem, 1)
-
 	go func() {
 		for update := range updates {
 			var res []SexDigestItem
@@ -98,12 +117,20 @@ func (c *Client) InitSexDigest() error {
 			c.SexDigest <- res
 		}
 	}()
-
 	return nil
 }
 
 // Initializes yellow_pages public exchange.
 func (c *Client) InitYellowPages() error {
+	c.YellowPages = make(chan []YellowPage, 1)
+	err := c.startYellowPages()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) startYellowPages() error {
 	updates, err := c.channelForUpdates.Consume(
 		fmt.Sprintf("%s_yellow_pages", c.User),
 		"",
@@ -117,8 +144,6 @@ func (c *Client) InitYellowPages() error {
 		return err
 	}
 
-	c.YellowPages = make(chan []YellowPage, 1)
-
 	go func() {
 		for update := range updates {
 			var res []YellowPage
@@ -130,6 +155,5 @@ func (c *Client) InitYellowPages() error {
 			c.YellowPages <- res
 		}
 	}()
-
 	return nil
 }

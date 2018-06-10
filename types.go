@@ -131,9 +131,10 @@ func (res *Response) GetResultEnum() ResultEnum {
 }
 
 type Client struct {
-	User     string
-	Password string
-	Updates  chan Response
+	User      string
+	Password  string
+	Updates   chan Response
+	RabbitUrl string
 
 	YellowPages chan []YellowPage
 	Deals       chan Deal
