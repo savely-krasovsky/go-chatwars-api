@@ -152,8 +152,8 @@ func NewClient(user string, password string, server ...string) (*Client, error) 
 	}
 
 	client.Updates = make(chan Response, 100)
-	client.reconnect()
-	return &client, nil
+	err := client.reconnect()
+	return &client, err
 }
 
 func (c *Client) reStartConsumers() error {
