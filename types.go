@@ -272,9 +272,10 @@ type reqAuthorizePayment struct {
 }
 
 type ResAuthorizePayment struct {
-	Fee    map[string]int `json:"fee"`
-	Debit  map[string]int `json:"debit"`
-	UserID int            `json:"userId"`
+	Fee           map[string]int `json:"fee"`
+	Debit         map[string]int `json:"debit"`
+	UserID        int            `json:"userId"`
+	TransactionId string         `json:"transactionId"`
 }
 
 type reqPay struct {
@@ -284,9 +285,10 @@ type reqPay struct {
 }
 
 type ResPay struct {
-	Fee    map[string]int `json:"fee"`
-	Debit  map[string]int `json:"debit"`
-	UserID int            `json:"userId"`
+	Fee           map[string]int `json:"fee"`
+	Debit         map[string]int `json:"debit"`
+	UserID        int            `json:"userId"`
+	TransactionId string         `json:"transactionId"`
 }
 
 type reqPayout struct {
