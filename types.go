@@ -321,6 +321,7 @@ type Profile struct {
 	Gold       int    `json:"gold"`
 	Pouches    int    `json:"pouches"`
 	Guild      string `json:"guild"`
+	GuildTag   string `json:"guild_tag"`
 	Class      string `json:"class"`
 	Mana       int    `json:"mana"`
 	Stamina    int    `json:"stamina"`
