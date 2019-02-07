@@ -174,13 +174,22 @@ type SexDigestItem struct {
 }
 
 type YellowPage struct {
-	Link        string      `json:"link"`
-	Name        string      `json:"name"`
-	OwnerName   string      `json:"ownerName"`
-	OwnerCastle string      `json:"ownerCastle"`
-	Kind        string      `json:"kind"`
-	Mana        int         `json:"mana"`
-	Offers      []OfferItem `json:"offers"`
+	Link           string      `json:"link"`
+	Name           string      `json:"name"`
+	OwnerName      string      `json:"ownerName"`
+	OwnerCastle    string      `json:"ownerCastle"`
+	Kind           string      `json:"kind"`
+	Mana           int         `json:"mana"`
+	Offers         []OfferItem `json:"offers"`
+	Specialization struct {
+		Gloves int `json:"gloves"`
+		Coat   int `json:"coat"`
+		Helmet int `json:"helmet"`
+		Boots  int `json:"boots"`
+		Armor  int `json:"armor"`
+		Weapon int `json:"weapon"`
+		Shield int `json:"shield"`
+	} `json:"specialization"`
 }
 
 type OfferItem struct {
