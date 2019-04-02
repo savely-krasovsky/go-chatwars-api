@@ -78,18 +78,42 @@ func (res *Response) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		res.Payload.ResGetInfo = &payload
+	case "viewCraftbook":
+		var payload ResViewCraftbook
+		if err := json.Unmarshal(temp.Payload, &payload); err != nil {
+			return err
+		}
+		res.Payload.ResViewCraftbook = &payload
 	case "requestProfile":
 		var payload ResRequestProfile
 		if err := json.Unmarshal(temp.Payload, &payload); err != nil {
 			return err
 		}
 		res.Payload.ResRequestProfile = &payload
+	case "requestBasicInfo":
+		var payload ResRequestBasicInfo
+		if err := json.Unmarshal(temp.Payload, &payload); err != nil {
+			return err
+		}
+		res.Payload.ResRequestBasicInfo = &payload
+	case "requestGearInfo":
+		var payload ResRequestGearInfo
+		if err := json.Unmarshal(temp.Payload, &payload); err != nil {
+			return err
+		}
+		res.Payload.ResRequestGearInfo = &payload
 	case "requestStock":
 		var payload ResRequestStock
 		if err := json.Unmarshal(temp.Payload, &payload); err != nil {
 			return err
 		}
 		res.Payload.ResRequestStock = &payload
+	case "guildInfo":
+		var payload ResGuildInfo
+		if err := json.Unmarshal(temp.Payload, &payload); err != nil {
+			return err
+		}
+		res.Payload.ResGuildInfo = &payload
 	case "wantToBuy":
 		var payload ResWantToBuy
 		if err := json.Unmarshal(temp.Payload, &payload); err != nil {
@@ -160,39 +184,54 @@ func (c *Client) reStartConsumers() error {
 	var err error
 
 	if c.Updates != nil {
-		err = c.startUpdateConsumer()
+		err := c.startUpdateConsumer()
 		if err != nil {
 			return err
 		}
 	}
 
 	if c.Deals != nil {
-		err = c.startDealsConsumer()
+		err := c.startDealsConsumer()
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.Duels != nil {
+		err := c.startDuelsConsumer()
 		if err != nil {
 			return err
 		}
 	}
 
 	if c.Offers != nil {
-		err = c.startOffersConsumer()
+		err := c.startOffersConsumer()
 		if err != nil {
 			return err
 		}
 	}
 
 	if c.SexDigest != nil {
-		err = c.startSexDigestConsumer()
+		err := c.startSexDigestConsumer()
 		if err != nil {
 			return err
 		}
 	}
 
 	if c.YellowPages != nil {
-		err = c.startYellowPages()
+		err := c.startYellowPages()
 		if err != nil {
 			return err
 		}
 	}
+
+	if c.AuctionDigest != nil {
+		err = c.startAuctionDigestConsumer()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -288,10 +327,18 @@ func (c *Client) startUpdateConsumer() error {
 					userID = res.Payload.ResPay.UserID
 				case "payout":
 					userID = res.Payload.ResPayout.UserID
+				case "viewCraftbook":
+					userID = res.Payload.ResViewCraftbook.UserID
 				case "requestProfile":
 					userID = res.Payload.ResRequestProfile.UserID
+				case "requestBasicInfo":
+					userID = res.Payload.ResRequestBasicInfo.UserID
+				case "requestGearInfo":
+					userID = res.Payload.ResRequestGearInfo.UserID
 				case "requestStock":
 					userID = res.Payload.ResRequestStock.UserID
+				case "guildInfo":
+					userID = res.Payload.ResGuildInfo.UserID
 				case "wantToBuy":
 					userID = res.Payload.ResWantToBuy.UserID
 				}
@@ -316,9 +363,11 @@ func (c *Client) startUpdateConsumer() error {
 func (c *Client) CloseConnection() error {
 	close(c.Updates)
 	close(c.Deals)
+	close(c.Duels)
 	close(c.Offers)
 	close(c.SexDigest)
 	close(c.YellowPages)
+	close(c.AuctionDigest)
 
 	if err := c.channelForUpdates.Close(); err != nil {
 		return err

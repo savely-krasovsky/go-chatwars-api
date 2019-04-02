@@ -553,6 +553,58 @@ func (c *Client) GetInfo() error {
 	return nil
 }
 
+// Request the list of recipes known to user.
+func (c *Client) ViewCraftbook(token string) error {
+	req := &Request{
+		Action: "viewCraftbook",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Sync-version of ViewCraftbook method.
+func (c *Client) ViewCraftbookSync(token string, userID int) (*Response, error) {
+	req := &Request{
+		Action: "viewCraftbook",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return nil, err
+	}
+
+	waiter := make(chan Response, 1)
+	c.waiters.Store(userID, waiter)
+
+	select {
+	case response := <-waiter:
+		if response.GetResultEnum() != Ok {
+			return &response, errors.New(string(response.GetResultEnum()))
+		}
+		return &response, nil
+	case <-time.After(10 * time.Second):
+		c.waiters.Delete(userID)
+		return nil, errors.New("timeout")
+	}
+}
+
 // Request brief user profile information.
 func (c *Client) RequestProfile(token string) error {
 	req := &Request{
@@ -605,6 +657,112 @@ func (c *Client) RequestProfileSync(token string, userID int) (*Response, error)
 	}
 }
 
+// Request basic user stats.
+// Base attack and defence (equipment bonuses are not included) and current class.
+func (c *Client) RequestBasicInfo(token string) error {
+	req := &Request{
+		Action: "requestBasicInfo",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Sync-version of RequestBasicInfo method.
+func (c *Client) RequestBasicInfoSync(token string, userID int) (*Response, error) {
+	req := &Request{
+		Action: "requestBasicInfo",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return nil, err
+	}
+
+	waiter := make(chan Response, 1)
+	c.waiters.Store(userID, waiter)
+
+	select {
+	case response := <-waiter:
+		if response.GetResultEnum() != Ok {
+			return &response, errors.New(string(response.GetResultEnum()))
+		}
+		return &response, nil
+	case <-time.After(10 * time.Second):
+		c.waiters.Delete(userID)
+		return nil, errors.New("timeout")
+	}
+}
+
+// Request user’s current outfit.
+// Keep in mind, that slot names and their amount can be changed without any notice.
+func (c *Client) RequestGearInfo(token string) error {
+	req := &Request{
+		Action: "requestGearInfo",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Sync-version of RequestGearInfo method.
+func (c *Client) RequestGearInfoSync(token string, userID int) (*Response, error) {
+	req := &Request{
+		Action: "requestGearInfo",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return nil, err
+	}
+
+	waiter := make(chan Response, 1)
+	c.waiters.Store(userID, waiter)
+
+	select {
+	case response := <-waiter:
+		if response.GetResultEnum() != Ok {
+			return &response, errors.New(string(response.GetResultEnum()))
+		}
+		return &response, nil
+	case <-time.After(10 * time.Second):
+		c.waiters.Delete(userID)
+		return nil, errors.New("timeout")
+	}
+}
+
 // Request users stock information.
 func (c *Client) RequestStock(token string) error {
 	req := &Request{
@@ -629,6 +787,59 @@ func (c *Client) RequestStock(token string) error {
 func (c *Client) RequestStockSync(token string, userID int) (*Response, error) {
 	req := &Request{
 		Action: "requestStock",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return nil, err
+	}
+
+	waiter := make(chan Response, 1)
+	c.waiters.Store(userID, waiter)
+
+	select {
+	case response := <-waiter:
+		if response.GetResultEnum() != Ok {
+			return &response, errors.New(string(response.GetResultEnum()))
+		}
+		return &response, nil
+	case <-time.After(10 * time.Second):
+		c.waiters.Delete(userID)
+		return nil, errors.New("timeout")
+	}
+}
+
+// Request users guild information.
+// Common info and stock. Excluding roster.
+func (c *Client) GuildInfo(token string) error {
+	req := &Request{
+		Action: "guildInfo",
+		Token:  token,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	err = c.makeRequest(body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Sync-version of GuildInfo method.
+func (c *Client) GuildInfoSync(token string, userID int) (*Response, error) {
+	req := &Request{
+		Action: "guildInfo",
 		Token:  token,
 	}
 

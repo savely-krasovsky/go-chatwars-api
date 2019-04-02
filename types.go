@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/streadway/amqp"
 	"sync"
+	"time"
 )
 
 const (
@@ -22,8 +23,12 @@ const (
 	Pay                      ActionEnum = "pay"
 	Payout                   ActionEnum = "payout"
 	GetInfo                  ActionEnum = "getInfo"
+	ViewCraftbook            ActionEnum = "viewCraftbook"
 	RequestProfile           ActionEnum = "requestProfile"
+	RequestBasicInfo         ActionEnum = "requestBasicInfo"
+	RequestGearInfo          ActionEnum = "requestGearInfo"
 	RequestStock             ActionEnum = "requestStock"
+	GuildInfo                ActionEnum = "guildInfo"
 	WantToBuy                ActionEnum = "wantToBuy"
 
 	// Unknown action for this lib, check Chat Wars docs
@@ -49,10 +54,18 @@ func (res *Response) GetActionEnum() ActionEnum {
 		return Payout
 	case "getInfo":
 		return GetInfo
+	case "viewCraftbook":
+		return ViewCraftbook
 	case "requestProfile":
 		return RequestProfile
+	case "requestBasicInfo":
+		return RequestBasicInfo
+	case "requestGearInfo":
+		return RequestGearInfo
 	case "requestStock":
 		return RequestStock
+	case "guildInfo":
+		return GuildInfo
 	case "wantToBuy":
 		return WantToBuy
 	default:
@@ -79,12 +92,18 @@ const (
 	NotRegistered ResultEnum = "NotRegistered"
 	// Authorization code is incorrect
 	InvalidCode ResultEnum = "InvalidCode"
+	// Requested operation not exists
+	NoSuchOperation ResultEnum = "NoSuchOperation"
 	// If we have some technical difficulties, or bug and are willing for you to repeat request
 	TryAgain ResultEnum = "TryAgain"
 	// Some field of transaction is bad or confirmation code is wrong
 	AuthorizationFailed ResultEnum = "AuthorizationFailed"
 	// The player or application balance is insufficient
 	InsufficientFunds ResultEnum = "InsufficientFunds"
+	// The player is not a high enough level to do this action.
+	LevelIsLow ResultEnum = "LevelIsLow"
+	// The player is not in implied guild.
+	NotInGuild ResultEnum = "NotInGuild"
 	// No such token, might be revoked?
 	InvalidToken ResultEnum = "InvalidToken"
 	// Your app has no rights to execute this action with this token.
@@ -115,12 +134,18 @@ func (res *Response) GetResultEnum() ResultEnum {
 		return NotRegistered
 	case "InvalidCode":
 		return InvalidCode
+	case "NoSuchOperation":
+		return NoSuchOperation
 	case "TryAgain":
 		return TryAgain
 	case "AuthorizationFailed":
 		return AuthorizationFailed
 	case "InsufficientFunds":
 		return InsufficientFunds
+	case "LevelIsLow":
+		return LevelIsLow
+	case "NotInGuild":
+		return NotInGuild
 	case "InvalidToken":
 		return InvalidToken
 	case "Forbidden":
@@ -136,10 +161,12 @@ type Client struct {
 	Updates   chan Response
 	RabbitUrl string
 
-	YellowPages chan []YellowPage
-	Deals       chan Deal
-	Offers      chan Offer
-	SexDigest   chan []SexDigestItem
+	Deals         chan Deal
+	Duels         chan Duel
+	Offers        chan Offer
+	SexDigest     chan []SexDigestItem
+	YellowPages   chan []YellowPage
+	AuctionDigest chan []AuctionDigestItem
 
 	waiters           sync.Map
 	connection        *amqp.Connection
@@ -147,6 +174,7 @@ type Client struct {
 	channelForPublish *amqp.Channel
 }
 
+// Deals block
 type Deal struct {
 	SellerID     string `json:"sellerId"`
 	SellerCastle string `json:"sellerCastle"`
@@ -159,6 +187,24 @@ type Deal struct {
 	Price        int    `json:"price"`
 }
 
+// Duels block
+type Duelist struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Tag    string `json:"tag"`
+	Castle string `json:"castle"`
+	Level  int    `json:"level"`
+	HP     int    `json:"hp"`
+}
+
+type Duel struct {
+	Winner      *Duelist `json:"winner"`
+	Loser       *Duelist `json:"loser"`
+	IsChallenge bool     `json:"isChallenge"`
+	IsGuildDuel bool     `json:"isGuildDuel"`
+}
+
+// Offers block
 type Offer struct {
 	SellerID     string `json:"sellerId"`
 	SellerCastle string `json:"sellerCastle"`
@@ -168,28 +214,21 @@ type Offer struct {
 	Price        int    `json:"price"`
 }
 
+// sex_digest block
 type SexDigestItem struct {
 	Name   string `json:"name"`
 	Prices []int  `json:"prices"`
 }
 
-type YellowPage struct {
-	Link           string      `json:"link"`
-	Name           string      `json:"name"`
-	OwnerName      string      `json:"ownerName"`
-	OwnerCastle    string      `json:"ownerCastle"`
-	Kind           string      `json:"kind"`
-	Mana           int         `json:"mana"`
-	Offers         []OfferItem `json:"offers"`
-	Specialization struct {
-		Gloves int `json:"gloves"`
-		Coat   int `json:"coat"`
-		Helmet int `json:"helmet"`
-		Boots  int `json:"boots"`
-		Armor  int `json:"armor"`
-		Weapon int `json:"weapon"`
-		Shield int `json:"shield"`
-	} `json:"specialization"`
+// yellow_pages block
+type Specialization struct {
+	Gloves int `json:"gloves"`
+	Coat   int `json:"coat"`
+	Helmet int `json:"helmet"`
+	Boots  int `json:"boots"`
+	Armor  int `json:"armor"`
+	Weapon int `json:"weapon"`
+	Shield int `json:"shield"`
 }
 
 type OfferItem struct {
@@ -198,10 +237,40 @@ type OfferItem struct {
 	Mana  int    `json:"mana"`
 }
 
+type YellowPage struct {
+	Link           string          `json:"link"`
+	Name           string          `json:"name"`
+	OwnerName      string          `json:"ownerName"`
+	OwnerCastle    string          `json:"ownerCastle"`
+	Kind           string          `json:"kind"`
+	Mana           int             `json:"mana"`
+	Offers         []OfferItem     `json:"offers"`
+	Specialization *Specialization `json:"specialization"`
+	GuildDiscount  int             `json:"guildDiscount"`
+	CastleDiscount int             `json:"castleDiscount"`
+}
+
 type Request struct {
 	Token   string          `json:"token"`
 	Action  string          `json:"action"`
 	Payload json.RawMessage `json:"payload"`
+}
+
+// au_digest block
+type AuctionDigestItem struct {
+	LotID        string         `json:"lotId"`
+	ItemName     string         `json:"itemName"`
+	SellerName   string         `json:"sellerName"`
+	Quality      *string        `json:"quality"`
+	SellerCastle string         `json:"sellerCastle"`
+	StartedAt    time.Time      `json:"startedAt"`
+	EndedAt      time.Time      `json:"endAt"`
+	BuyerCastle  *string        `json:"buyerCastle"`
+	Status       *string        `json:"status"`
+	FinishedAt   *time.Time     `json:"finishedAt"`
+	BuyerName    *string        `json:"buyerName"`
+	Price        int            `json:"price"`
+	Stats        map[string]int `json:"stats"`
 }
 
 type reqPayload struct {
@@ -232,8 +301,12 @@ type resPayload struct {
 	*ResPay
 	*ResPayout
 	*ResGetInfo
+	*ResViewCraftbook
 	*ResRequestProfile
+	*ResRequestBasicInfo
+	*ResRequestGearInfo
 	*ResRequestStock
+	*ResGuildInfo
 	*ResWantToBuy
 }
 
@@ -314,10 +387,16 @@ type ResGetInfo struct {
 	Balance int `json:"balance"`
 }
 
-type ResRequestProfile struct {
-	Profile Profile `json:"profile"`
-	UserID  int     `json:"userId"`
-	Token   string  `json:"token"`
+type CraftRecord struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Price int    `json:"price"`
+}
+
+type ResViewCraftbook struct {
+	Alchemy []*CraftRecord `json:"alchemy"`
+	Craft   []*CraftRecord `json:"craft"`
+	UserID  int            `json:"userId"`
 }
 
 type Profile struct {
@@ -336,9 +415,45 @@ type Profile struct {
 	Stamina    int    `json:"stamina"`
 }
 
+type ResRequestProfile struct {
+	Profile *Profile `json:"profile"`
+	UserID  int      `json:"userId"`
+}
+
+type BasicProfile struct {
+	Class   string `json:"class"`
+	Attack  int    `json:"atk"`
+	Defense int    `json:"def"`
+}
+
+type ResRequestBasicInfo struct {
+	Profile *BasicProfile `json:"profile"`
+	UserID  int           `json:"userId"`
+}
+
+type ResRequestGearInfo struct {
+	Gear   map[string]string `json:"gear"`
+	Ammo   map[string]int    `json:"ammo"`
+	UserID int               `json:"userId"`
+}
+
 type ResRequestStock struct {
 	Stock  map[string]int `json:"stock"`
 	UserID int            `json:"userId"`
+}
+
+type ResGuildInfo struct {
+	Tag        string         `json:"tag"`
+	Level      int            `json:"level"`
+	Castle     string         `json:"castle"`
+	Glory      int            `json:"glory"`
+	Members    int            `json:"members"`
+	Name       string         `json:"name"`
+	Lobby      string         `json:"lobby"`
+	StockSize  int            `json:"stockSize"`
+	StockLimit int            `json:"stockLimit"`
+	Stock      map[string]int `json:"stock"`
+	UserID     int            `json:"userId"`
 }
 
 type reqWantToBuy struct {
