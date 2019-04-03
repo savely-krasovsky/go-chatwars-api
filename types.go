@@ -293,6 +293,7 @@ type Response struct {
 
 type resPayload struct {
 	RequiredOperation string `json:"requiredOperation"`
+	Token             string `json:"token"`
 	*ResCreateAuthCode
 	*ResGrantToken
 	*ResAuthAdditionalOperation

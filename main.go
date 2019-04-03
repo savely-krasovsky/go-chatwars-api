@@ -27,6 +27,7 @@ func (res *Response) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	res.Payload.RequiredOperation = payload.RequiredOperation
+	res.Payload.Token = payload.Token
 	res.Action = temp.Action
 
 	switch temp.Action {
