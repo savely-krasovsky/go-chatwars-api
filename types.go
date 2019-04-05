@@ -238,16 +238,18 @@ type OfferItem struct {
 }
 
 type YellowPage struct {
-	Link           string          `json:"link"`
-	Name           string          `json:"name"`
-	OwnerName      string          `json:"ownerName"`
-	OwnerCastle    string          `json:"ownerCastle"`
-	Kind           string          `json:"kind"`
-	Mana           int             `json:"mana"`
-	Offers         []OfferItem     `json:"offers"`
-	Specialization *Specialization `json:"specialization"`
-	GuildDiscount  int             `json:"guildDiscount"`
-	CastleDiscount int             `json:"castleDiscount"`
+	Link               string          `json:"link"`
+	Name               string          `json:"name"`
+	OwnerName          string          `json:"ownerName"`
+	OwnerCastle        string          `json:"ownerCastle"`
+	Kind               string          `json:"kind"`
+	Mana               int             `json:"mana"`
+	Offers             []OfferItem     `json:"offers"`
+	Specialization     *Specialization `json:"specialization"`
+	GuildDiscount      int             `json:"guildDiscount"`
+	CastleDiscount     int             `json:"castleDiscount"`
+	MaintenanceEnabled bool            `json:"maintenanceEnabled"`
+	MaintenanceCost    int             `json:"maintenanceCost"`
 }
 
 type Request struct {
