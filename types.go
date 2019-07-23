@@ -416,6 +416,8 @@ type Profile struct {
 	Class      string `json:"class"`
 	Mana       int    `json:"mana"`
 	Stamina    int    `json:"stamina"`
+	Health     int    `json:"hp"`
+	MaxHealth  int    `json:"maxHp"`
 }
 
 type ResRequestProfile struct {
