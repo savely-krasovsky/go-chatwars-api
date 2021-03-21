@@ -1,6 +1,6 @@
-module github.com/artofey/go-chatwars-api
+module github.com/L11R/go-chatwars-api
 
-go 1.15
+go 1.12
 
 require (
 	github.com/confluentinc/confluent-kafka-go v1.6.1
