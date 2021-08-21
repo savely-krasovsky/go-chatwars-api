@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/Shopify/sarama"
 )
 
 // Initializes deals public exchange.
 func (c *Client) InitDeals() error {
 	c.Deals = make(chan Deal, 1)
-	topics := []string{fmt.Sprintf("%sdeals", c.PublicPrefix)}
-	pc, err := newPublicConsumer(topics)
+	topic := fmt.Sprintf("%sdeals", c.PublicPrefix)
+	pc, err := newPublicConsumer(topic)
 	if err != nil {
 		return err
 	}
@@ -33,8 +33,8 @@ func (c *Client) dealHandler(val []byte) error {
 // Initializes offers public exchange.
 func (c *Client) InitDuels() error {
 	c.Duels = make(chan Duel, 1)
-	topics := []string{fmt.Sprintf("%sduels", c.PublicPrefix)}
-	pc, err := newPublicConsumer(topics)
+	topic := fmt.Sprintf("%sduels", c.PublicPrefix)
+	pc, err := newPublicConsumer(topic)
 	if err != nil {
 		return err
 	}
@@ -55,8 +55,8 @@ func (c *Client) duelHandler(val []byte) error {
 // Initializes offers public exchange.
 func (c *Client) InitOffers() error {
 	c.Offers = make(chan Offer, 1)
-	topics := []string{fmt.Sprintf("%soffers", c.PublicPrefix)}
-	pc, err := newPublicConsumer(topics)
+	topic := fmt.Sprintf("%soffers", c.PublicPrefix)
+	pc, err := newPublicConsumer(topic)
 	if err != nil {
 		return err
 	}
@@ -77,8 +77,8 @@ func (c *Client) offerHandler(val []byte) error {
 // Initializes sex_digest public exchange.
 func (c *Client) InitSexDigest() error {
 	c.SexDigest = make(chan []SexDigestItem, 1)
-	topics := []string{fmt.Sprintf("%ssex_digest", c.PublicPrefix)}
-	pc, err := newPublicConsumer(topics)
+	topic := fmt.Sprintf("%ssex_digest", c.PublicPrefix)
+	pc, err := newPublicConsumer(topic)
 	if err != nil {
 		return err
 	}
@@ -99,8 +99,8 @@ func (c *Client) sexDigestHandler(val []byte) error {
 // Initializes yellow_pages public exchange.
 func (c *Client) InitYellowPages() error {
 	c.YellowPages = make(chan []YellowPage, 1)
-	topics := []string{fmt.Sprintf("%syellow_pages", c.PublicPrefix)}
-	pc, err := newPublicConsumer(topics)
+	topic := fmt.Sprintf("%syellow_pages", c.PublicPrefix)
+	pc, err := newPublicConsumer(topic)
 	if err != nil {
 		return err
 	}
@@ -121,8 +121,8 @@ func (c *Client) yellowPagesHandler(val []byte) error {
 // Initializes au_digest public exchange.
 func (c *Client) InitAuctionDigest() error {
 	c.AuctionDigest = make(chan []AuctionDigestItem, 1)
-	topics := []string{fmt.Sprintf("%sau_digest", c.PublicPrefix)}
-	pc, err := newPublicConsumer(topics)
+	topic := fmt.Sprintf("%sau_digest", c.PublicPrefix)
+	pc, err := newPublicConsumer(topic)
 	if err != nil {
 		return err
 	}
@@ -140,56 +140,30 @@ func (c *Client) auctionDigestHandler(val []byte) error {
 	return nil
 }
 
-func newPublicConsumer(topics []string) (*kafka.Consumer, error) {
-	updates, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": kafkaServer,
-		// "broker.address.family":           "v4",
-		"group.id":              kafkaGroupID,
-		"enable.auto.commit":    true,
-		"session.timeout.ms":    10000,
-		"heartbeat.interval.ms": 3000,
-		// "request.timeout.ms":       305000,
-		"max.poll.interval.ms":     300000,
-		"auto.offset.reset":        "latest",
-		"go.events.channel.enable": true,
-		"go.events.channel.size":   1,
-		// "go.application.rebalance.enable": true,
-		"enable.partition.eof": true,
-	})
+func newPublicConsumer(topic string) (sarama.PartitionConsumer, error) {
+	cfg := sarama.NewConfig()
+	consumer, err := sarama.NewConsumer([]string{kafkaServer}, cfg)
+	// надо закрывать
 	if err != nil {
 		return nil, err
 	}
-	err = updates.SubscribeTopics(topics, nil)
+	pc, err := consumer.ConsumePartition(topic, 0, sarama.OffsetNewest)
 	if err != nil {
 		return nil, err
 	}
-	return updates, nil
+	return pc, nil
 }
 
-func startConsuming(updates *kafka.Consumer, handler func([]byte) error) {
-	defer updates.Close()
+func startConsuming(updates sarama.PartitionConsumer, handler func([]byte) error) {
+	defer func() {
+		if err := updates.Close(); err != nil {
+			log.Fatalln(err)
+		}
+	}()
 
-	for update := range updates.Events() {
-		switch e := update.(type) {
-		// case kafka.AssignedPartitions:
-		// 	log.Printf("AssignedPartitions: %v\n", e)
-		// 	if err := updates.Assign(e.Partitions); err != nil {
-		// 		log.Printf("Error AssignedPartitions: %v\n", err)
-		// 	}
-		// case kafka.RevokedPartitions:
-		// 	log.Printf("RevokedPartitions: %v\n", e)
-		// 	if err := updates.Unassign(); err != nil {
-		// 		log.Printf("Error RevokedPartitions: %v\n", err)
-		// 	}
-		case *kafka.Message:
-			if err := handler(e.Value); err != nil {
-				log.Printf("Error: %v\n", err)
-				continue
-			}
-		case kafka.Error:
-			log.Printf("Error in Kafka: %v\n", e)
-		default:
-			log.Printf("Ignored: %v\n", e)
+	for msg := range updates.Messages() {
+		if err := handler(msg.Value); err != nil {
+			log.Printf("Handler error: %v", err)
 		}
 	}
 }
