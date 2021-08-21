@@ -13,7 +13,6 @@ const (
 	CW3 = "amqps://%s:%s@api.chtwrs.com:5673/"
 
 	kafkaServer     = "digest-api.chtwrs.com:9092"
-	kafkaGroupID    = "some-super-duper-uniquie-id"
 	CW2PublicPrefix = "cw2-"
 	CW3PublicPrefix = "cw3-"
 )
