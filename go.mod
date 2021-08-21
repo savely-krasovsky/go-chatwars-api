@@ -1,4 +1,4 @@
-module github.com/artofey/go-chatwars-api
+module github.com/L11R/go-chatwars-api
 
 go 1.12
 
